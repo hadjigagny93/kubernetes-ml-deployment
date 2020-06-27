@@ -1,10 +1,10 @@
 postgresql:
-    username: theia
-    password: D3vGHDjG2ECGefBDoeMd
-    hostname: 127.0.0.1
-    port: 5432
-    database: bank
+    username: 
+    password: 
+    hostname: 
+    port: 
+    database: 
 
 api:
-    port: 5000
-    host: 0.0.0.0
+    port: 
+    host: 
