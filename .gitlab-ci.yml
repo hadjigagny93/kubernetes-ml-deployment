@@ -1,0 +1,63 @@
+image: docker:latest
+services:
+  - docker:dind
+
+stages:
+  - build
+  - test
+  - deploy
+
+build-docker-image:
+  stage: build
+  variables:
+    IMAGE_NAME: eu.gcr.io/yotta-ml3/$CI_PROJECT_NAME:$CI_COMMIT_BRANCH
+  script:
+    - echo "$GITLAB_IAM_PRIVATE_KEY" > key.json
+    - cat key.json
+    - echo "print working directory"
+    - echo $(pwd)
+    - docker build . -t $IMAGE_NAME
+    - docker login -u _json_key -p "$(cat key.json)" $IMAGE_NAME
+    - docker push $IMAGE_NAME
+  only:
+    - develop
+    - staging
+    - master
+
+unit-test:
+  image: python:3.8.1
+  stage: test
+  script:
+    - pip install -r requirements.txt
+    - pip install -e .
+    - pytest chaos/test/unit
+  only:
+    - develop
+    - staging
+
+deployment:
+  stage: deploy
+  variables:
+    API_DEPLOY_ENV: deployment/chaos-deployment-$CI_COMMIT_BRANCH
+    LOADBALANCER_ENV: deployment/loadbalancer-$CI_COMMIT_BRANCH
+  script:
+    - apk add --update make ca-certificates openssl python3
+    - update-ca-certificates
+    - echo "$GITLAB_IAM_PRIVATE_KEY" > key.json
+    - wget https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.tar.gz
+    - tar zxvf google-cloud-sdk.tar.gz && ./google-cloud-sdk/install.sh --usage-reporting=false --path-update=true
+    - google-cloud-sdk/bin/gcloud --quiet components update
+    - google-cloud-sdk/bin/gcloud auth activate-service-account --key-file key.json
+    - google-cloud-sdk/bin/gcloud config set project yotta-ml3
+    - google-cloud-sdk/bin/gcloud config set container/cluster gaia
+    - google-cloud-sdk/bin/gcloud config set compute/zone europe-west1-b
+    - google-cloud-sdk/bin/gcloud container clusters get-credentials gaia --zone europe-west1-b
+    - google-cloud-sdk/bin/gcloud components install kubectl
+    - google-cloud-sdk/bin/kubectl apply -f $API_DEPLOY_ENV.yml
+    - google-cloud-sdk/bin/kubectl apply -f $LOADBALANCER_ENV.yml
+  only:
+    - staging
+    - master
+
+
+     
