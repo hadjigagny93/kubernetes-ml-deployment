@@ -1,6 +1,0 @@
-config.yml
-.git
-.cache
-.vscode
-*.egg-info
-__pycache__
