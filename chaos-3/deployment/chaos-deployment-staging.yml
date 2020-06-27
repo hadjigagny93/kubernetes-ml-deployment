@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chaos-deployment-3-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-deployment-3-staging
+  template:
+    metadata:
+      labels:
+        app: api-deployment-3-staging
+    spec:
+      containers:
+      - name: python-app
+        image: eu.gcr.io/yotta-ml3/chaos-3:staging
+        imagePullPolicy: Always
+        env:
+        - name: YOTTA_ML3_CONFIGURATION_PATH
+          value: "/secret/config.yml"
+        volumeMounts:
+        - name: secret
+          mountPath: "/secret"
+          readOnly: true
+      
+      - name: cloud-sql-proxy
+        image: gcr.io/cloudsql-docker/gce-proxy:1.17
+        command: ["/cloud_sql_proxy", "-instances=yotta-ml3:europe-west1:uranus=tcp:5432", "-credential_file=/secret/yotta-ml3-6bf205da4810.json"]
+        securityContext:
+          runAsNonRoot: true
+        volumeMounts:
+        - name: secret
+          mountPath: "/secret"
+          readOnly: true
+          
+      volumes:
+      - name: secret
+        secret:
+          secretName: chaos-secrets-3

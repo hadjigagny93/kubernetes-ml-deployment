@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: chaos-3-loadbalancer-develop
+spec:
+  selector:
+    app: api-deployment-3-develop
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+  type: LoadBalancer
+
+  
